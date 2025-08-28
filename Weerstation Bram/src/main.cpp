@@ -10,7 +10,7 @@
 const char* ssid = "SSID";
 const char* password = "PASSWORD!";
 const char* serverUrl = "serverUrl";
-const char* NTP_SERVER = "NTP_server";
+const char* NTP_SERVER = "pool.ntp.org";
 
 // --- Sensors ---
 #define I2C_SDA 21
