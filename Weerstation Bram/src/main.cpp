@@ -7,9 +7,10 @@
 #include <time.h>
 
 // --- WiFi ---
-const char* ssid = "SSID";
-const char* password = "PASSWORD";
-const char* serverUrl = "SERVERURL";
+const char* ssid = "ssid";
+const char* password = "password";
+const char* serverUrl = "serverurl";
+const char* API_token = "API_token";
 const char* NTP_SERVER = "pool.ntp.org";
 
 // --- Sensors ---
@@ -28,12 +29,16 @@ void syncTimeOnce() {
   configTime(0, 0, NTP_SERVER);
   struct tm timeinfo;
   int retry = 0;
-  while (!getLocalTime(&timeinfo) && retry < 20) {
-    delay(500);
+  bool synced = false;
+  while (!(synced = getLocalTime(&timeinfo)) && retry < 40) { // increase retries
+    delay(1000);
     retry++;
   }
-  if (retry < 20) {
+  if (synced) {
     Serial.println("Time synced.");
+    Serial.printf("Year: %d Month: %d Day: %d Hour: %d Min: %d Sec: %d\n",
+      timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
+      timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
   } else {
     Serial.println("Time sync failed!");
   }
@@ -55,7 +60,7 @@ void connectWiFi() {
 float readChargerVoltage() {
   int adc = analogRead(CHARGER_VOLT_PIN);
   float vout = adc * (3.3f / 4095.0f);
-  float vin = vout * (25.0f / 15.0f); // 10k/15k divider
+  float vin = vout * (4.0f / 3.0f); // 1M + 3M divider
   return vin;
 }
 
@@ -65,10 +70,11 @@ void reportData() {
   float humidity = dht.readHumidity();
   float chargerVoltage = readChargerVoltage();
 
+  time_t now = time(nullptr);
   struct tm timeinfo;
-  getLocalTime(&timeinfo);
+  gmtime_r(&now, &timeinfo); // Get UTC time
   char timestamp[32];
-  strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+  strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", &timeinfo);
 
   Serial.printf("Report @ %s | T=%.2f C | P=%.1f hPa | H=%.1f %% | Charger=%.2f V\n",
                 timestamp, temperature, pressure, humidity, chargerVoltage);
@@ -77,7 +83,8 @@ void reportData() {
     HTTPClient http;
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
-    String payload = String("{\"timestamp\":\"") + timestamp +
+    http.addHeader("x-api-key", API_token); 
+    String payload = String("{\"time\":\"") + timestamp +
                      "\",\"temperature\":" + temperature +
                      ",\"pressure\":" + pressure +
                      ",\"humidity\":" + humidity +
@@ -116,6 +123,7 @@ void setup() {
 
   if (cause == ESP_SLEEP_WAKEUP_TIMER) {
     connectWiFi();
+    syncTimeOnce();
     reportData();
     WiFi.disconnect(true);
   }
