@@ -8,8 +8,8 @@
 
 // --- WiFi ---
 const char* ssid = "SSID";
-const char* password = "PASSWORD!";
-const char* serverUrl = "serverUrl";
+const char* password = "PASSWORD";
+const char* serverUrl = "SERVERURL";
 const char* NTP_SERVER = "pool.ntp.org";
 
 // --- Sensors ---
@@ -21,10 +21,7 @@ Adafruit_BMP280 bmp;
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
-// --- Tipping bucket ---
-#define BUCKET_PIN 33   // RTC-capable GPIO
-RTC_DATA_ATTR uint32_t tipCount = 0;
-const float MM_PER_TIP = 0.2;
+#define CHARGER_VOLT_PIN 34  // Analog pin for charger voltage
 
 // --- Functions ---
 void syncTimeOnce() {
@@ -52,19 +49,29 @@ void connectWiFi() {
   Serial.println(WiFi.status() == WL_CONNECTED ? "\nWiFi connected!" : "\nWiFi failed!");
 }
 
+// Voltage divider: R1 = 10k, R2 = 15k
+// Vout = Vin * (R2 / (R1 + R2)) => Vin = Vout * ((R1 + R2) / R2)
+// ADC range: 0-4095, reference voltage: 3.3V
+float readChargerVoltage() {
+  int adc = analogRead(CHARGER_VOLT_PIN);
+  float vout = adc * (3.3f / 4095.0f);
+  float vin = vout * (25.0f / 15.0f); // 10k/15k divider
+  return vin;
+}
+
 void reportData() {
   float temperature = bmp.readTemperature();
   float pressure = bmp.readPressure() / 100.0F; // hPa
   float humidity = dht.readHumidity();
-  float rainfall = tipCount * MM_PER_TIP;
+  float chargerVoltage = readChargerVoltage();
 
   struct tm timeinfo;
   getLocalTime(&timeinfo);
   char timestamp[32];
   strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
 
-  Serial.printf("Report @ %s | T=%.2f C | P=%.1f hPa | H=%.1f %% | Rain=%.2f mm (%u tips)\n",
-                timestamp, temperature, pressure, humidity, rainfall, tipCount);
+  Serial.printf("Report @ %s | T=%.2f C | P=%.1f hPa | H=%.1f %% | Charger=%.2f V\n",
+                timestamp, temperature, pressure, humidity, chargerVoltage);
 
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -74,15 +81,11 @@ void reportData() {
                      "\",\"temperature\":" + temperature +
                      ",\"pressure\":" + pressure +
                      ",\"humidity\":" + humidity +
-                     ",\"rain_tips\":" + tipCount +
-                     ",\"rain_mm\":" + rainfall + "}";
+                     ",\"charger_voltage\":" + chargerVoltage + "}";
     int code = http.POST(payload);
     Serial.printf("HTTP Response: %d\n", code);
     http.end();
   }
-
-  // Reset counter after reporting
-  tipCount = 0;
 }
 
 uint64_t secondsToNextBoundary() {
@@ -101,8 +104,7 @@ void setup() {
   Wire.begin(I2C_SDA, I2C_SCL);
   dht.begin();
   bmp.begin(0x77);
-
-  pinMode(BUCKET_PIN, INPUT_PULLUP);
+  pinMode(CHARGER_VOLT_PIN, INPUT);
 
   esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
   if (cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
@@ -110,11 +112,6 @@ void setup() {
     connectWiFi();
     syncTimeOnce();
     WiFi.disconnect(true);
-  }
-
-  if (cause == ESP_SLEEP_WAKEUP_EXT1) {
-    tipCount++;
-    Serial.printf("Rain tip! Total tips=%u\n", tipCount);
   }
 
   if (cause == ESP_SLEEP_WAKEUP_TIMER) {
@@ -127,8 +124,6 @@ void setup() {
   uint64_t sleepSeconds = secondsToNextBoundary();
   Serial.printf("Sleeping for %llu seconds...\n", sleepSeconds);
 
-  // Enable wake on tip or timer
-  esp_sleep_enable_ext1_wakeup((1ULL << BUCKET_PIN), ESP_EXT1_WAKEUP_ALL_LOW);
   esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
 
   esp_deep_sleep_start();
