@@ -55,4 +55,5 @@ TODO
 
 <a name="code"></a>
 ## 4. Code
-The code is built and uploaded to the microcontroller using the PlatformIO extension in VSCode. See `src/main.cpp` for the code running on the microcontroller.
+
+The code is built and uploaded to the microcontroller using the PlatformIO extension in VSCode. See `Weerstation Bram/src/main.cpp` for the code running on the microcontroller.
