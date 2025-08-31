@@ -13,7 +13,7 @@ Contents
 <a name="intro"></a>
 ## 1. Introduction
 
-This repository provides an overview of a weatherstation build which is currently ongoing. The weatherstation is already reporting to a dashboard at https://weerstationbram.nl but it still needing further upgrades. Upcoming changes:
+This repository provides an overview of a weather station build which is currently ongoing. The weather station is already reporting to a dashboard at https://weerstationbram.nl but it still needing further upgrades. Upcoming changes:
 
 - Adding tipping bucket by adding the radio transceiver chip
 - More stable reading of the voltage divider by changing the resistors
