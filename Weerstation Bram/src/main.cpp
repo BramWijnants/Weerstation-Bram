@@ -5,13 +5,13 @@
 #include <Adafruit_BMP280.h>
 #include <DHT.h>
 #include <time.h>
-#include <algorithm>
+#include <ArduinoJson.h>
 
 // --- WiFi ---
 const char* ssid = "SSID";
 const char* password = "PASSWORD";
 const char* serverUrl = "https://weerstationbram.nl/api/meteo_Arnhem";
-const char* API_token = "API_TOKEN";
+const char* API_token = "API_Token";
 const char* NTP_SERVER = "pool.ntp.org";
 
 // --- Sensors ---
@@ -41,7 +41,7 @@ void syncTime() {
 void connectWiFi() {
   WiFi.begin(ssid, password);
   unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 5000) {
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
     delay(500);
     Serial.print(".");
   }
@@ -58,6 +58,14 @@ float readChargerVoltage() {
   return vin;
 }
 
+void setJsonFloatOrNull(JsonDocument& doc, const char* key, float value) {
+  if (isnan(value)) {
+    doc[key] = nullptr; // ArduinoJson treats nullptr as JSON null
+  } else {
+    doc[key] = value;
+  }
+}
+
 void reportData() {
   Wire.begin(I2C_SDA, I2C_SCL);
   dht.begin();
@@ -69,30 +77,28 @@ void reportData() {
   float humidity = dht.readHumidity();
   float chargerVoltage = readChargerVoltage();
 
-  if (isnan(temperature) || isnan(pressure) || isnan(humidity)) {
-    Serial.println("Sensor read error, skipping report.");
-    return;
-  }
-
   time_t now = time(nullptr);
   struct tm timeinfo;
   gmtime_r(&now, &timeinfo); // Get UTC time
   char timestamp[32];
   strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", &timeinfo);
 
-  Serial.printf("Report @ %s | T=%.2f C | P=%.1f hPa | H=%.1f %% | Charger=%.2f V\n",
-                timestamp, temperature, pressure, humidity, chargerVoltage);
+  StaticJsonDocument<256> doc;
+  doc["time"] = timestamp;
+  setJsonFloatOrNull(doc, "temperature", temperature);
+  setJsonFloatOrNull(doc, "pressure", pressure);
+  setJsonFloatOrNull(doc, "humidity", humidity);
+  setJsonFloatOrNull(doc, "charger_voltage", chargerVoltage);
+
+  String payload;
+  serializeJson(doc, payload);
+  Serial.println(payload); 
 
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("x-api-key", API_token); 
-    String payload = String("{\"time\":\"") + timestamp +
-                     "\",\"temperature\":" + temperature +
-                     ",\"pressure\":" + pressure +
-                     ",\"humidity\":" + humidity +
-                     ",\"charger_voltage\":" + chargerVoltage + "}";
+    http.addHeader("x-api-key", API_token);
     int code = http.POST(payload);
     Serial.printf("HTTP Response: %d\n", code);
     http.end();
@@ -110,19 +116,26 @@ void setup() {
     syncTime();
     WiFi.disconnect(true);
   } else if (cause == ESP_SLEEP_WAKEUP_TIMER) {
+
     connectWiFi();
     syncTime();
+
     struct tm timeinfo;
     getLocalTime(&timeinfo);
+
     int minute = timeinfo.tm_min;
     if (minute % 5 != 0) {
+
+      WiFi.disconnect(true);
+
       int sleepMinutes = 5 - (minute % 5);
       int sleepSeconds = sleepMinutes * 60 - timeinfo.tm_sec;
-      sleepSeconds += 10;
+      sleepSeconds += 2; // Extra buffer
       Serial.printf("Minute is %d, sleeping for %d seconds until next 5-min mark...\n", minute, sleepSeconds);
-      WiFi.disconnect(true);
+
       esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
       esp_deep_sleep_start();
+
       return;
     }
     // At 5-min mark, report
@@ -132,10 +145,12 @@ void setup() {
   // After reporting or first boot, sleep until next boundary
   struct tm timeinfo;
   getLocalTime(&timeinfo);
+
   int minute = timeinfo.tm_min;
   int sleepMinutes = 5 - (minute % 5);
   int sleepSeconds = sleepMinutes * 60 - timeinfo.tm_sec;
-  sleepSeconds += 10;
+  sleepSeconds += 5; // Extra buffer
+
   Serial.printf("Sleeping for %d seconds until next 5-min mark...\n", sleepSeconds);
   esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
   esp_deep_sleep_start();
