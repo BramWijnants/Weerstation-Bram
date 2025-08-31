@@ -5,12 +5,13 @@
 #include <Adafruit_BMP280.h>
 #include <DHT.h>
 #include <time.h>
+#include <algorithm>
 
 // --- WiFi ---
-const char* ssid = "ssid";
-const char* password = "password";
-const char* serverUrl = "serverurl";
-const char* API_token = "API_token";
+const char* ssid = "SSID";
+const char* password = "PASSWORD";
+const char* serverUrl = "https://weerstationbram.nl/api/meteo_Arnhem";
+const char* API_token = "API_TOKEN";
 const char* NTP_SERVER = "pool.ntp.org";
 
 // --- Sensors ---
@@ -25,16 +26,10 @@ DHT dht(DHTPIN, DHTTYPE);
 #define CHARGER_VOLT_PIN 34  // Analog pin for charger voltage
 
 // --- Functions ---
-void syncTimeOnce() {
+void syncTime() {
   configTime(0, 0, NTP_SERVER);
   struct tm timeinfo;
-  int retry = 0;
-  bool synced = false;
-  while (!(synced = getLocalTime(&timeinfo)) && retry < 40) { // increase retries
-    delay(1000);
-    retry++;
-  }
-  if (synced) {
+  if (getLocalTime(&timeinfo)) {
     Serial.println("Time synced.");
     Serial.printf("Year: %d Month: %d Day: %d Hour: %d Min: %d Sec: %d\n",
       timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
@@ -43,18 +38,17 @@ void syncTimeOnce() {
     Serial.println("Time sync failed!");
   }
 }
-
 void connectWiFi() {
   WiFi.begin(ssid, password);
   unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 5000) {
     delay(500);
     Serial.print(".");
   }
   Serial.println(WiFi.status() == WL_CONNECTED ? "\nWiFi connected!" : "\nWiFi failed!");
 }
 
-// Voltage divider: R1 = 10k, R2 = 15k
+// Voltage divider: R1 = 1M, R2 = 3M
 // Vout = Vin * (R2 / (R1 + R2)) => Vin = Vout * ((R1 + R2) / R2)
 // ADC range: 0-4095, reference voltage: 3.3V
 float readChargerVoltage() {
@@ -69,6 +63,11 @@ void reportData() {
   float pressure = bmp.readPressure() / 100.0F; // hPa
   float humidity = dht.readHumidity();
   float chargerVoltage = readChargerVoltage();
+
+  if (isnan(temperature) || isnan(pressure) || isnan(humidity)) {
+    Serial.println("Sensor read error, skipping report.");
+    return;
+  }
 
   time_t now = time(nullptr);
   struct tm timeinfo;
@@ -95,17 +94,6 @@ void reportData() {
   }
 }
 
-uint64_t secondsToNextBoundary() {
-  struct tm timeinfo;
-  getLocalTime(&timeinfo);
-
-  int secOfHour = timeinfo.tm_min * 60 + timeinfo.tm_sec;
-  int nextBoundary = ((secOfHour / 300) + 1) * 300; // 300 = 5 min
-  int sleepSeconds = nextBoundary - secOfHour;
-  if (sleepSeconds <= 0) sleepSeconds = 300; // safety
-  return (uint64_t)sleepSeconds;
-}
-
 void setup() {
   Serial.begin(115200);
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -114,26 +102,41 @@ void setup() {
   pinMode(CHARGER_VOLT_PIN, INPUT);
 
   esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-  if (cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
-    // first boot
-    connectWiFi();
-    syncTimeOnce();
-    WiFi.disconnect(true);
-  }
 
-  if (cause == ESP_SLEEP_WAKEUP_TIMER) {
+  if (cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
+    // First boot: connect WiFi and sync time only
     connectWiFi();
-    syncTimeOnce();
+    syncTime();
+    WiFi.disconnect(true);
+  } else if (cause == ESP_SLEEP_WAKEUP_TIMER) {
+    connectWiFi();
+    syncTime();
+    struct tm timeinfo;
+    getLocalTime(&timeinfo);
+    int minute = timeinfo.tm_min;
+    if (minute % 5 != 0) {
+      int sleepMinutes = 5 - (minute % 5);
+      int sleepSeconds = sleepMinutes * 60 - timeinfo.tm_sec;
+      sleepSeconds += 10;
+      Serial.printf("Minute is %d, sleeping for %d seconds until next 5-min mark...\n", minute, sleepSeconds);
+      WiFi.disconnect(true);
+      esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
+      esp_deep_sleep_start();
+      return;
+    }
+    // At 5-min mark, report
     reportData();
     WiFi.disconnect(true);
   }
-
-  // Calculate sleep time until next boundary
-  uint64_t sleepSeconds = secondsToNextBoundary();
-  Serial.printf("Sleeping for %llu seconds...\n", sleepSeconds);
-
+  // After reporting or first boot, sleep until next boundary
+  struct tm timeinfo;
+  getLocalTime(&timeinfo);
+  int minute = timeinfo.tm_min;
+  int sleepMinutes = 5 - (minute % 5);
+  int sleepSeconds = sleepMinutes * 60 - timeinfo.tm_sec;
+  sleepSeconds += 10;
+  Serial.printf("Sleeping for %d seconds until next 5-min mark...\n", sleepSeconds);
   esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
-
   esp_deep_sleep_start();
 }
 
