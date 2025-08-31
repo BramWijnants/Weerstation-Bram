@@ -48,7 +48,7 @@ Components for the enclosure:
 
 WIP
 
-![Work in progress](./resources/readme_img/WorkInProgress.jpg)
+![Work in progress](./resources/readme_img/WorkInProgress.jpeg)
 <a name="code"></a>
 ## 4. Code
 
