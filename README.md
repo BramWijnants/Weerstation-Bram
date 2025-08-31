@@ -57,3 +57,8 @@ TODO
 ## 4. Code
 
 The code is built and uploaded to the microcontroller using the PlatformIO extension in VSCode. See `Weerstation Bram/src/main.cpp` for the code running on the microcontroller.
+
+The hosting solution consist of a (very) cheap linux ubuntu 22 server with the domain name weerstationbram.nl and www.weerstationbram.nl . With Lets Encrypt and Certbot it was pretty easy to get a (free) SSL certificate.
+The backend to which the weather station reports consist of a mariaDB, Flask with Gunicorn is handling the API to the database. Nginx and grafana-server are layered on top of this.
+Server costs for all this are currently around €2.80 per month
+
