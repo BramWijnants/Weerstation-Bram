@@ -59,6 +59,11 @@ float readChargerVoltage() {
 }
 
 void reportData() {
+  Wire.begin(I2C_SDA, I2C_SCL);
+  dht.begin();
+  bmp.begin(0x77);
+  pinMode(CHARGER_VOLT_PIN, INPUT);
+
   float temperature = bmp.readTemperature();
   float pressure = bmp.readPressure() / 100.0F; // hPa
   float humidity = dht.readHumidity();
@@ -96,11 +101,7 @@ void reportData() {
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(I2C_SDA, I2C_SCL);
-  dht.begin();
-  bmp.begin(0x77);
-  pinMode(CHARGER_VOLT_PIN, INPUT);
-
+  
   esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
 
   if (cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
