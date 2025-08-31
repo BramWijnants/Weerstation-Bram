@@ -16,7 +16,7 @@ Contents
 This repository provides an overview of a weatherstation build which is currently ongoing. The weatherstation is already reporting to a dashboard at https://weerstationbram.nl but is still needing further upgrades. Upcoming changes:
 
 - Adding tipping bucket by adding the radio transceiver chip
-- More stable reading of the voltage divider by chinging the resistors
+- More stable reading of the voltage divider by changing the resistors
 
 ![Work in progress](./resources/readme_img/WorkInProgress.jpeg)
 
@@ -25,7 +25,7 @@ This repository provides an overview of a weatherstation build which is currentl
 
 - [LilyGO TTGO T7 Mini32 V1.4 ESP32-WROVER](https://github.com/LilyGO/TTGO-T7-Demo) € 12.00
 - [DHT-22 (AM2302)](https://www.adafruit.com/product/385) € 10.00
-- [BMP280 Barometric Pressure + Temperature Sensor](hhttps://www.adafruit.com/product/2651) € 10.00
+- [BMP280 Barometric Pressure Temperature Sensor](hhttps://www.adafruit.com/product/2651) € 10.00
 - [Tipping bucket from another station](https://www.handleidi.ng/auriol/ian-365824/handleiding)
 - [Lithium Ion Polymer Battery - 3.7v 2500mAh](https://www.adafruit.com/product/328) € 14.95
 - [Adafruit Universal USB / DC / Solar Lithium Ion/Polymer charger (bq24074)](https://www.adafruit.com/product/4755) € 14.95
