@@ -100,8 +100,8 @@ void reportData() {
 }
 
 void setup() {
+
   Serial.begin(115200);
-  
   esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
 
   if (cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
