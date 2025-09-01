@@ -1,30 +1,22 @@
 Weerstation Bram
 ===============
 
-Contents
-----------------------
-
-1. [ Introduction ](#intro)
-2. [ Used components ](#components)
-3. [ Diagram ](#diagram)
-4. [ Code ](#code)
-5. [ Dashboard ](#dashboard)
-<a name="intro"></a>
-## 1. Introduction
-
 This repository provides an overview of a weather station build which is currently ongoing. The weather station is already reporting to a dashboard at https://weerstationbram.nl, but it still needs further upgrades. Upcoming changes:
-
 - Adding a tipping bucket by adding the radio transceiver chip
 - More stable reading of the voltage divider by changing the resistors
 
 Future updates:
-
 - Sensor hut for the temperature, humidity, and air pressure sensor
 
 ![Work in progress](./resources/readme_img/WorkInProgress.jpg)
 
+1. [ Used components ](#components)
+2. [ Diagram ](#diagram)
+3. [ Code ](#code)
+4. [ Dashboard ](#dashboard)
+
 <a name="components"></a>
-## 2. Used components
+## 1. Used components
 
 - Main microcontroller – [LilyGO TTGO T7 Mini32 V1.4 ESP32-WROVER](https://github.com/LilyGO/TTGO-T7-Demo) €12.00
 - Temperature and humidity sensor – [DHT-22 (AM2302)](https://www.adafruit.com/product/385) €10.00
@@ -53,7 +45,7 @@ Components for the enclosure:
 - More nuts and bolts
 
 <a name="diagram"></a>
-## 3. Diagram
+## 2. Diagram
 
 ![Work in progress](./resources/readme_img/diagram.png)
 
@@ -62,15 +54,16 @@ Components for the enclosure:
 - Voltage divider to be able to read voltages from the charger board.
 
 <a name="code"></a>
-## 4. Code
+## 3. Code
 
 The code is built and uploaded to the microcontroller using the PlatformIO extension in VSCode. See `Weerstation Bram/src/main.cpp` for the code running on the microcontroller.
 
 <a name="dashboard"></a>
-## 5. Dashboard
+## 4. Dashboard
 The hosting solution consist of a (very) cheap linux ubuntu 22 server with the domain name weerstationbram.nl and www.weerstationbram.nl . With Lets Encrypt and Certbot it was pretty easy to get a (free) SSL certificate.
 The backend to which the weather station reports consist of a mariaDB, Flask with Gunicorn is handling the API to the database. Nginx and grafana-server are layered on top of this.
 Server costs for all this are currently around €2.80 per month
+
 
 
 
