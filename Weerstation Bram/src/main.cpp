@@ -11,7 +11,7 @@
 const char* ssid = "SSID";
 const char* password = "PASSWORD";
 const char* serverUrl = "https://weerstationbram.nl/api/meteo_Arnhem";
-const char* API_token = "API_Token";
+const char* API_token = "API_TOKEN";
 const char* NTP_SERVER = "pool.ntp.org";
 
 // --- Sensors ---
@@ -26,22 +26,29 @@ DHT dht(DHTPIN, DHTTYPE);
 #define CHARGER_VOLT_PIN 34  // Analog pin for charger voltage
 
 // --- Functions ---
+RTC_DATA_ATTR int lastUploadMinute = -1; // Retained during deep sleep
+
 void syncTime() {
   configTime(0, 0, NTP_SERVER);
   struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
-    Serial.println("Time synced.");
-    Serial.printf("Year: %d Month: %d Day: %d Hour: %d Min: %d Sec: %d\n",
-      timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
-      timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-  } else {
-    Serial.println("Time sync failed!");
+  int retries = 5;
+  while (retries-- > 0) {
+    if (getLocalTime(&timeinfo)) {
+      Serial.println("Time synced.");
+      Serial.printf("Year: %d Month: %d Day: %d Hour: %d Min: %d Sec: %d\n",
+        timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
+        timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+      return;
+    }
+    delay(1000); // wait 1 second before retry
   }
+  Serial.println("Time sync failed after retries!");
 }
+
 void connectWiFi() {
   WiFi.begin(ssid, password);
   unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
     delay(500);
     Serial.print(".");
   }
@@ -75,7 +82,7 @@ void reportData() {
   float temperature = bmp.readTemperature();
   float pressure = bmp.readPressure() / 100.0F; // hPa
   float humidity = dht.readHumidity();
-  float chargerVoltage = readChargerVoltage();
+  float chargerVoltage = round(readChargerVoltage() * 100000) / 100000; // round to 5 decimal places
 
   time_t now = time(nullptr);
   struct tm timeinfo;
@@ -83,7 +90,7 @@ void reportData() {
   char timestamp[32];
   strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", &timeinfo);
 
-  StaticJsonDocument<256> doc;
+  JsonDocument doc;
   doc["time"] = timestamp;
   setJsonFloatOrNull(doc, "temperature", temperature);
   setJsonFloatOrNull(doc, "pressure", pressure);
@@ -110,46 +117,38 @@ void setup() {
   Serial.begin(115200);
   esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
 
-  if (cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
-    // First boot: connect WiFi and sync time only
-    connectWiFi();
-    syncTime();
-    WiFi.disconnect(true);
-  } else if (cause == ESP_SLEEP_WAKEUP_TIMER) {
+  connectWiFi();
+  syncTime();
 
-    connectWiFi();
-    syncTime();
-
-    struct tm timeinfo;
-    getLocalTime(&timeinfo);
-
-    int minute = timeinfo.tm_min;
-    if (minute % 5 != 0) {
-
-      WiFi.disconnect(true);
-
-      int sleepMinutes = 5 - (minute % 5);
-      int sleepSeconds = sleepMinutes * 60 - timeinfo.tm_sec;
-      sleepSeconds += 2; // Extra buffer
-      Serial.printf("Minute is %d, sleeping for %d seconds until next 5-min mark...\n", minute, sleepSeconds);
-
-      esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
-      esp_deep_sleep_start();
-
-      return;
-    }
-    // At 5-min mark, report
-    reportData();
-    WiFi.disconnect(true);
-  }
-  // After reporting or first boot, sleep until next boundary
   struct tm timeinfo;
   getLocalTime(&timeinfo);
-
   int minute = timeinfo.tm_min;
-  int sleepMinutes = 5 - (minute % 5);
-  int sleepSeconds = sleepMinutes * 60 - timeinfo.tm_sec;
-  sleepSeconds += 5; // Extra buffer
+
+  if (cause == ESP_SLEEP_WAKEUP_TIMER && minute % 5 == 0 && minute != lastUploadMinute) {
+    lastUploadMinute = minute;
+    reportData();
+  }
+
+  WiFi.disconnect(true);
+
+  getLocalTime(&timeinfo);
+  time_t now = mktime(&timeinfo); 
+
+  minute = timeinfo.tm_min;
+  int nextMinute = ((minute / 5) + 1) * 5;
+  int nextHour = timeinfo.tm_hour;
+  if (nextMinute >= 60) {
+      nextMinute = 0;
+      nextHour += 1;
+  }
+
+  struct tm nextTime = timeinfo;
+  nextTime.tm_min = nextMinute;
+  nextTime.tm_hour = nextHour;
+  nextTime.tm_sec = 2;
+  time_t target = mktime(&nextTime);
+  int sleepSeconds = target - now;
+  if (sleepSeconds <= 0) sleepSeconds = 1; // fallback
 
   Serial.printf("Sleeping for %d seconds until next 5-min mark...\n", sleepSeconds);
   esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
