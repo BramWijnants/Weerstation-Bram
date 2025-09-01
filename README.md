@@ -21,7 +21,7 @@ Future updates:
 
 - Sensor hut for the temperature, humidity, and air pressure sensor
 
-![Work in progress](./resources/readme_img/WorkInProgress.jpeg)
+![Work in progress](./resources/readme_img/WorkInProgress.jpg)
 
 <a name="components"></a>
 ## 2. Used components
