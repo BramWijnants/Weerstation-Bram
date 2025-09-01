@@ -17,6 +17,10 @@ This repository provides an overview of a weather station build which is current
 - Adding a tipping bucket by adding the radio transceiver chip
 - More stable reading of the voltage divider by changing the resistors
 
+Future updates:
+
+- Sensor hut for the temperature, humidity, and air pressure sensor
+
 ![Work in progress](./resources/readme_img/WorkInProgress.jpeg)
 
 <a name="components"></a>
@@ -61,4 +65,5 @@ The code is built and uploaded to the microcontroller using the PlatformIO exten
 The hosting solution consist of a (very) cheap linux ubuntu 22 server with the domain name weerstationbram.nl and www.weerstationbram.nl . With Lets Encrypt and Certbot it was pretty easy to get a (free) SSL certificate.
 The backend to which the weather station reports consist of a mariaDB, Flask with Gunicorn is handling the API to the database. Nginx and grafana-server are layered on top of this.
 Server costs for all this are currently around €2.80 per month
+
 
