@@ -124,7 +124,7 @@ void setup() {
   getLocalTime(&timeinfo);
   int minute = timeinfo.tm_min;
 
-  if (cause == ESP_SLEEP_WAKEUP_TIMER && minute % 5 == 0 && minute != lastUploadMinute) {
+  if (cause == ESP_SLEEP_WAKEUP_TIMER && minute % 15 == 0 && minute != lastUploadMinute) {
     lastUploadMinute = minute;
     reportData();
   }
@@ -135,7 +135,7 @@ void setup() {
   time_t now = mktime(&timeinfo); 
 
   minute = timeinfo.tm_min;
-  int nextMinute = ((minute / 5) + 1) * 5;
+  int nextMinute = ((minute / 15) + 1) * 15;
   int nextHour = timeinfo.tm_hour;
   if (nextMinute >= 60) {
       nextMinute = 0;
@@ -150,7 +150,7 @@ void setup() {
   int sleepSeconds = target - now;
   if (sleepSeconds <= 0) sleepSeconds = 1; // fallback
 
-  Serial.printf("Sleeping for %d seconds until next 5-min mark...\n", sleepSeconds);
+  Serial.printf("Sleeping for %d seconds until next 15-min mark...\n", sleepSeconds);
   esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
   esp_deep_sleep_start();
 }
