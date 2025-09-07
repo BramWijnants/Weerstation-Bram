@@ -3,17 +3,9 @@ Weerstation Bram
 
 This repository provides an overview of a weather station build which is currently ongoing. The weather station is already reporting to a dashboard at https://weerstationbram.nl, but it still needs further upgrades. Upcoming changes:
 - Adding a tipping bucket by adding the radio transceiver chip
-- More stable reading of the voltage divider by changing the resistors
 
 Future updates:
 - Sensor hut for the temperature, humidity, and air pressure sensor
-
-![Work in progress](./resources/readme_img/WorkInProgress.jpg)
-
-1. [ Used components ](#components)
-2. [ Diagram ](#diagram)
-3. [ Code ](#code)
-4. [ Dashboard ](#dashboard)
 
 <a name="components"></a>
 ## 1. Used components
@@ -47,8 +39,6 @@ Components for the enclosure:
 <a name="diagram"></a>
 ## 2. Diagram
 
-![Work in progress](./resources/readme_img/diagram.png)
-
 - The diagram shows an older charger board. The new version (see link above) handles the power out pin differently. This old version can give 6V from OUT, for which a buck boost converter is nescessairy. The new version I have installed will only go to 4.4, so only a boost converter is then sufficient.
 - 10k Ohm pullup resistor for the data signal of the DHT-22 is adviced by the adafruit instructions
 - Voltage divider to be able to read voltages from the charger board.
@@ -64,6 +54,11 @@ The hosting solution consist of a (very) cheap linux ubuntu 22 server with the d
 The backend to which the weather station reports consist of a mariaDB, Flask with Gunicorn is handling the API to the database. Nginx and grafana-server are layered on top of this.
 Server costs for all this are currently around €2.80 per month
 
+<a name="pictures"></a>
+## 5. Pictures
 
+![boards](./resources/pictures/boards.jpg)
+![birdhouse open2](./resources/pictures/birdhouse%20open2.jpg)
 
-
+![outside birdhouse](./resources/pictures/outside_birdhouse.jpg)
+![birdhouse open1](./resources/pictures/birdhouse%20open1.jpg)
