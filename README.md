@@ -13,7 +13,6 @@ Future updates:
 - Main microcontroller – [LilyGO TTGO T7 Mini32 V1.4 ESP32-WROVER](https://github.com/LilyGO/TTGO-T7-Demo) €12.00
 - Temperature and humidity sensor – [DHT-22 (AM2302)](https://www.adafruit.com/product/385) €10.00
 - Barometric Pressure and Temperature Sensor – [BMP280](https://www.adafruit.com/product/4059) €10.00
-- Tipping bucket from another weather station – [AURIOL weather station sensor](https://www.handleidi.ng/auriol/ian-365824/handleiding)
 - [Lithium Ion Polymer Battery – 3.7V 2500mAh](https://www.adafruit.com/product/328) €14.95
 - Solar LiPo battery charger board – [bq24074](https://www.adafruit.com/product/4755) €14.95
 - Solar panel 6V 500mA 145x145mm – [AliExpress](https://www.aliexpress.com/item/32877897718.html) €5.50
@@ -31,7 +30,7 @@ Other components:
 - Heat shrink wrap, hot glue, soldering equipment
 
 Components for the enclosure:
-- Weatherproof box
+- Birdhouse
 - Piece of acrylic sheet
 - 2 mounting hooks
 - More nuts and bolts
