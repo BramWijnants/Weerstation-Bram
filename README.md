@@ -38,7 +38,7 @@ Components for the enclosure:
 <a name="diagram"></a>
 ## 2. Diagram
 
-![wiring diagram](.resources/diagram/diagram.png)
+![wiring diagram](./resources/diagram/diagram.png)
 
 - The diagram shows an older charger board. The new version (see link above) handles the power out pin differently. This old version can give 6V from OUT, for which a buck boost converter is nescessairy. The new version I have installed will only go to 4.4, so only a boost converter is then sufficient.
 - 10k Ohm pullup resistor for the data signal of the DHT-22 is adviced by the adafruit instructions
@@ -64,3 +64,4 @@ Server costs for all this are currently around €2.80 per month
 ![outside birdhouse](./resources/pictures/outside_birdhouse.jpg)
 
 ![birdhouse open1](./resources/pictures/birdhouse%20open1.jpg)
+
